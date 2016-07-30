@@ -35,8 +35,9 @@ DataSet
     >>>my_data_set.run()
 """
 
-from libs.utils.class_variable import LogVariable
+from libs.utils.class_variable import VariableApplyFunc, DelVariables
 import pandas as pd
+import numpy as np
 from collections import OrderedDict, namedtuple
 
 
@@ -140,7 +141,12 @@ class DataSet:
 if __name__ == '__main__':
     d = pd.DataFrame({'one' : pd.Series([1., 2., 3., 6.], index=['a', 'b', 'c', 'd']),'two' : pd.Series([1., 2., 3., 4.], index=['a', 'b', 'c', 'd'])})
     my_data_set = DataSet(d,'my data')
-    my_data_set.add_data_method(LogVariable(d,['one','two'],mode='append'),method_name='log',method_type=1)
+    my_data_set.add_data_method(VariableApplyFunc(data=my_data_set._work_data, func=np.log, func_name='log',
+                                                  variable_names=['one','two'],mode='append'),
+                                method_name='log',method_type=1)
+    print(my_data_set._work_data)
+    my_data_set.add_data_method(DelVariables(data=my_data_set._work_data,variable_names=['one','log_two']),
+                                method_name='del',method_type=1)
     my_data_set.run()
     print(my_data_set._work_data)
     print(my_data_set)
