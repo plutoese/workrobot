@@ -1,0 +1,158 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>libs.utils.class_formatconverter &mdash; workrobot  documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="workrobot  documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for libs.utils.class_formatconverter</h1><div class="highlight"><pre>
+<span class="c"># coding=UTF-8</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">=========================================</span>
+<span class="sd">格式转换类</span>
+<span class="sd">=========================================</span>
+
+<span class="sd">:Author: glen</span>
+<span class="sd">:Date: 2016.7.21</span>
+<span class="sd">:Tags: format conversion</span>
+<span class="sd">:abstract: 格式转换</span>
+
+<span class="sd">**类**</span>
+<span class="sd">==================</span>
+<span class="sd">MongoDBFormatConverter</span>
+<span class="sd">    MongoDB数据格式转换基类</span>
+<span class="sd">MongoDBToPandasSeries</span>
+<span class="sd">    MongoDB数据格式转换为Pandas的Series格式</span>
+<span class="sd">MongoDBToPandasDataFrame</span>
+<span class="sd">     MongoDB数据格式转换为Pandas的DataFrame格式</span>
+<span class="sd">MongoDBToPandasPanel</span>
+<span class="sd">    MongoDB数据格式转换为Pandas的Panel格式</span>
+<span class="sd">MongoDBToPandasFormat</span>
+<span class="sd">    MongoDB数据格式转换为Pandas支持的格式</span>
+
+
+<span class="sd">**使用方法**</span>
+<span class="sd">==================</span>
+<span class="sd">连接数据库</span>
+<span class="sd">    创建MongoDB实例就可以建立数据库连接。</span>
+
+<span class="sd">**示范代码**</span>
+<span class="sd">==================</span>
+<span class="sd">::</span>
+
+<span class="sd">    &gt;&gt;&gt;# 连接MongoDB</span>
+<span class="sd">    &gt;&gt;&gt;mongo = MongoDB(conn_str=&#39;mongodb://plutoese:z1Yh29@139.196.189.191:3717/&#39;)</span>
+<span class="sd">    &gt;&gt;&gt;# 连接MongoDB中的数据库</span>
+<span class="sd">    &gt;&gt;&gt;mdb = MonDatabase(mongodb=mongo, database_name=&#39;region&#39;)</span>
+<span class="sd">    &gt;&gt;&gt;# 返回MongoDB中的数据库列表</span>
+<span class="sd">    &gt;&gt;&gt;print(mongo.client.database_names())</span>
+<span class="sd">    &gt;&gt;&gt;# 返回MongoDB数据库中数据集合列表</span>
+<span class="sd">    &gt;&gt;&gt;print(mdb.collection_names)</span>
+<span class="sd">    &gt;&gt;&gt;# 创建一个新的数据集合</span>
+<span class="sd">    &gt;&gt;&gt;mdb.create_collection(&#39;cities&#39;)</span>
+<span class="sd">    &gt;&gt;&gt;# 删除一个数据集合</span>
+<span class="sd">    &gt;&gt;&gt;mdb.drop_collection(&#39;cities&#39;)</span>
+<span class="sd">    &gt;&gt;&gt;# 连接数据库中的collection</span>
+<span class="sd">    &gt;&gt;&gt;mcollection = MonCollection(database=mdb, collection_name=&#39;cities&#39;)</span>
+<span class="sd">    &gt;&gt;&gt;# 插入数据到collection中</span>
+<span class="sd">    &gt;&gt;&gt;mcollection.insert([{&#39;name&#39;:&#39;Andy&#39;}])</span>
+<span class="sd">    &gt;&gt;&gt;# 在collection中查询数据</span>
+<span class="sd">    &gt;&gt;&gt;print(list(mcollection.find({&#39;name&#39;:&#39;Tom&#39;})))</span>
+<span class="sd">    &gt;&gt;&gt;#关闭MongoDB连接</span>
+<span class="sd">    &gt;&gt;&gt;mcollection.close()</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">libs.imexport.class_mongodb</span> <span class="kn">import</span> <span class="n">MongoDB</span><span class="p">,</span> <span class="n">MonDatabase</span><span class="p">,</span> <span class="n">MonCollection</span>
+
+
+<div class="viewcode-block" id="MongoDBFormatConverter"><a class="viewcode-back" href="../../../libs.utils.html#libs.utils.class_formatconverter.MongoDBFormatConverter">[docs]</a><span class="k">class</span> <span class="nc">MongoDBFormatConverter</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cursor</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span> <span class="o">=</span> <span class="n">cursor</span>
+
+
+</div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">mcollection</span> <span class="o">=</span> <span class="n">MonCollection</span><span class="p">(</span><span class="n">database</span><span class="o">=</span><span class="n">MonDatabase</span><span class="p">(</span><span class="n">mongodb</span><span class="o">=</span><span class="n">MongoDB</span><span class="p">(),</span> <span class="n">database_name</span><span class="o">=</span><span class="s">&#39;region&#39;</span><span class="p">),</span>
+                                <span class="n">collection_name</span><span class="o">=</span><span class="s">&#39;provincestat&#39;</span><span class="p">)</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">mcollection</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s">&#39;year&#39;</span><span class="p">:</span><span class="s">&#39;2010&#39;</span><span class="p">},</span><span class="n">projection</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;_id&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="s">&#39;variable&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s">&#39;value&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s">&#39;province&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s">&#39;acode&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">})</span>
+    <span class="n">mongoconverter</span> <span class="o">=</span> <span class="n">MongoDBFormatConverter</span><span class="p">(</span><span class="n">cursor</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">mongoconverter</span><span class="o">.</span><span class="n">_cursor</span><span class="p">)[</span><span class="mi">0</span><span class="p">:</span><span class="mi">5</span><span class="p">])</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
