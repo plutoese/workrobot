@@ -35,11 +35,13 @@ DataSet
     >>>my_data_set.run()
 """
 
-from libs.utils.class_variable import VariableApplyFunc, DelVariables
+from libs.utils.class_variable import VariableCreator, DelVariables
+from libs.utils.class_basicmodel import Describe
 import pandas as pd
 import numpy as np
+from copy import deepcopy
 from collections import OrderedDict, namedtuple
-
+from libs.utils.class_formatconverter import MonCollection, MongoDB, MonDatabase, MongoDBToPandasFormat
 
 class DataSet:
     """ 对数据集进行封装
@@ -49,7 +51,7 @@ class DataSet:
     :param str type: 数据集类型
     :return: 无返回值
     """
-    def __init__(self, data=None, name='', dataset_type='unknown'):
+    def __init__(self, data=None, name='', type='unknown'):
         # 数据集的名称
         self._name = name
         # 数据集类型
@@ -64,7 +66,7 @@ class DataSet:
             raise TypeError
 
         # 数据集数据
-        self._work_data = self._raw_data
+        self._work_data = deepcopy(self._raw_data)
         # 数据集工作流程
         self._work_flow = OrderedDict()
         # 分析结果
@@ -109,7 +111,7 @@ class DataSet:
             if self._work_flow[method_name].type == 1:
                 self._work_data = self._work_flow[method_name].method()
             else:
-                pass
+                self._analysis_result[method_name] = self._work_flow[method_name].method()
 
     def __repr__(self):
         """ 打印对象的信息
@@ -120,6 +122,8 @@ class DataSet:
         fmt_str = '='*80
         fmt_str = ''.join(['\n',fmt_str,'\n'])
         fmt_str = ''.join([fmt_str,'DataSet: {}'.format(self._name),'\n'])
+        fmt_str = ''.join([fmt_str,'-'*80,'\n'])
+        fmt_str = ''.join([fmt_str,self._raw_data.__repr__(),'\n'])
         fmt_str = ''.join([fmt_str,'-'*80,'\n'])
         for key in self._work_flow:
             fmt_str = ''.join([fmt_str,self._work_flow[key].method.__repr__(),'\n'])
@@ -141,16 +145,42 @@ class DataSet:
 if __name__ == '__main__':
     d = pd.DataFrame({'one' : pd.Series([1., 2., 3., 6.], index=['a', 'b', 'c', 'd']),'two' : pd.Series([1., 2., 3., 4.], index=['a', 'b', 'c', 'd'])})
     my_data_set = DataSet(d,'my data')
-    my_data_set.add_data_method(VariableApplyFunc(data=my_data_set._work_data, func=np.log, func_name='log',
-                                                  variable_names=['one','two'],mode='append'),
+    my_data_set.add_data_method(VariableCreator(data=my_data_set._work_data, func=np.log, name='log',
+                                                  variable_names='one',mode='append'),
                                 method_name='log',method_type=1)
     print(my_data_set._work_data)
-    my_data_set.add_data_method(DelVariables(data=my_data_set._work_data,variable_names=['one','log_two']),
+    my_data_set.add_data_method(DelVariables(data=my_data_set._work_data, name='del', variable_names=['one']),
                                 method_name='del',method_type=1)
     my_data_set.run()
-    print(my_data_set._work_data)
     print(my_data_set)
+    print(my_data_set.data)
 
+    print('------------------Test Real World Example----------------')
+    mcollection = MonCollection(database=MonDatabase(mongodb=MongoDB(), database_name='region'),
+                                collection_name='provincestat')
+    #cursor = mcollection.find({'variable':{'$in':['人均地区生产总值','私人控股企业法人单位数','城镇居民消费','城镇单位就业人员平均工资']}},
+    #                          projection={'_id':0,'variable':1,'value':1,'province':1,'acode':1,'year':1})
+    #cursor = mcollection.find({'year':'2010', 'variable':{'$in':['人均地区生产总值','私人控股企业法人单位数','城镇居民消费','城镇单位就业人员平均工资']}},
+    #                          projection={'_id':0,'variable':1,'value':1,'province':1,'acode':1})
+    cursor = mcollection.find({'variable':'人均地区生产总值','acode':'110000'},
+                              projection={'_id':0,'variable':1,'value':1,'province':1,'acode':1,'year':1})
+    mongoconverter = MongoDBToPandasFormat(cursor)
 
+    # Test first
+    result = mongoconverter(values='value', index=['year'], columns='variable',dropna=True)
+    #result = mongoconverter(values='value', index=['acode','year'], columns='variable',dropna=True)
+    #result = mongoconverter(values='value', index=['acode','year'], columns='variable',
+    #                        dropna=False, balanced=True)
+    real_world_dataset = DataSet(result,'region data')
+
+    real_world_dataset.add_data_method(VariableCreator(data=real_world_dataset.data, func=np.log,
+                                                       name='log',variable_names=['人均地区生产总值'],
+                                                       mode='append'),
+                                method_name='log',method_type=1)
+    real_world_dataset.add_data_method(Describe(data=real_world_dataset.data),
+                                       method_name='describe',method_type=2)
+    real_world_dataset.run()
+    print(real_world_dataset.data)
+    print(real_world_dataset)
 
 
