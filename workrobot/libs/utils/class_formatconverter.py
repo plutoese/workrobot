@@ -111,19 +111,6 @@ class PandasDataStructureTransformer:
         """
         result = pd.pivot_table(data=dataframe, values=values, index=index, columns=columns,
                                 dropna=dropna,fill_value=fill_value)
-        if len(index) > 1 and balanced:
-
-            print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-            keep_index = result.index.get_level_values(index[1]).drop_duplicates()
-            for row_label in sorted(set(result.index.get_level_values(index[0]))):
-                tmp_result = result.loc[row_label].dropna()
-                keep_index = keep_index.intersection(tmp_result.index)
-                if len(keep_index) < 1:
-                    break
-                print('------',keep_index.intersection(result.loc[row_label].index))
-
-            to_be_deleted_index = result.index.get_level_values(index[1]).drop_duplicates().difference(keep_index)
-            result = result.drop(to_be_deleted_index,level=index[1])
 
         return result
 
@@ -131,20 +118,20 @@ class PandasDataStructureTransformer:
 if __name__ == '__main__':
     mcollection = MonCollection(database=MonDatabase(mongodb=MongoDB(), database_name='region'),
                                 collection_name='provincestat')
-    #cursor = mcollection.find({'variable':{'$in':['人均地区生产总值','私人控股企业法人单位数','城镇居民消费','城镇单位就业人员平均工资']}},
-    #                          projection={'_id':0,'variable':1,'value':1,'province':1,'acode':1,'year':1})
+    cursor = mcollection.find({'variable':{'$in':['人均地区生产总值','私人控股企业法人单位数','城镇居民消费','城镇单位就业人员平均工资']}},
+                              projection={'_id':0,'variable':1,'value':1,'province':1,'acode':1,'year':1})
     #cursor = mcollection.find({'year':'2010', 'variable':{'$in':['人均地区生产总值','私人控股企业法人单位数','城镇居民消费','城镇单位就业人员平均工资']}},
     #                          projection={'_id':0,'variable':1,'value':1,'province':1,'acode':1})
-    cursor = mcollection.find({'variable':'人均地区生产总值','acode':'110000'},
-                              projection={'_id':0,'variable':1,'value':1,'province':1,'acode':1,'year':1})
+    #cursor = mcollection.find({'variable':'人均地区生产总值','acode':'110000'},
+    #                          projection={'_id':0,'variable':1,'value':1,'province':1,'acode':1,'year':1})
     mongoconverter = MongoDBToPandasFormat(cursor)
 
     # Test first
-    result = mongoconverter(values='value', index=['year'], columns='variable',dropna=True)
-    #result = mongoconverter(values='value', index=['acode','year'], columns='variable',dropna=True)
+    #result = mongoconverter(values='value', index=['year'], columns='variable',dropna=True)
+    result = mongoconverter(values='value', index=['acode','year'], columns='variable',dropna=True)
     #result = mongoconverter(values='value', index=['acode','year'], columns='variable',
     #                        dropna=False, balanced=True)
     print(result)
-    result.to_excel('e:/backup/result.xlsx')
+    #result.to_excel('e:/backup/result.xlsx')
 
 
