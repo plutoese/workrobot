@@ -69,6 +69,9 @@ class DataSet:
         self._work_data = deepcopy(self._raw_data)
         # 数据集工作流程
         self._work_flow = OrderedDict()
+        # 打印的工作流程
+        self._work_flow_to_print = OrderedDict()
+
         # 分析结果
         self._analysis_result = OrderedDict()
 
@@ -90,6 +93,7 @@ class DataSet:
 
         # 加入方法到流程中
         self._work_flow[method_name] = Method(type=method_type, method=method)
+        self._work_flow_to_print[method_name] = Method(type=method_type, method=method)
 
     def run(self, methods=None):
         """ 运行工作流中的方法对数据进行分析
@@ -112,6 +116,7 @@ class DataSet:
                 self._work_data = self._work_flow[method_name].method()
             else:
                 self._analysis_result[method_name] = self._work_flow[method_name].method()
+            self._work_flow.pop(method_name)
 
     def __repr__(self):
         """ 打印对象的信息
@@ -123,10 +128,10 @@ class DataSet:
         fmt_str = ''.join(['\n',fmt_str,'\n'])
         fmt_str = ''.join([fmt_str,'DataSet: {}'.format(self._name),'\n'])
         fmt_str = ''.join([fmt_str,'-'*80,'\n'])
-        fmt_str = ''.join([fmt_str,self._raw_data.__repr__(),'\n'])
+        fmt_str = ''.join([fmt_str,self._work_data.__repr__(),'\n'])
         fmt_str = ''.join([fmt_str,'-'*80,'\n'])
-        for key in self._work_flow:
-            fmt_str = ''.join([fmt_str,self._work_flow[key].method.__repr__(),'\n'])
+        for key in self._work_flow_to_print:
+            fmt_str = ''.join([fmt_str,self._work_flow_to_print[key].method.__repr__(),'\n'])
             fmt_str = ''.join([fmt_str,'~'*80,'\n'])
         return ''.join([fmt_str,'='*80,'\n'])
 
@@ -141,6 +146,14 @@ class DataSet:
     @property
     def type(self):
         return self._type
+
+    @property
+    def work_flow(self):
+        return self._work_flow
+
+    @property
+    def result(self):
+        return self._analysis_result
 
 if __name__ == '__main__':
     d = pd.DataFrame({'one' : pd.Series([1., 2., 3., 6.], index=['a', 'b', 'c', 'd']),'two' : pd.Series([1., 2., 3., 4.], index=['a', 'b', 'c', 'd'])})

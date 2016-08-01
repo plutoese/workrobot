@@ -183,6 +183,12 @@ class MonCollection:
             raise Exception
 
     def find(self, *args, **kwargs):
+        """ 查询数据
+
+        :param args:
+        :param kwargs:
+        :return:
+        """
         return self._collection.find(*args, **kwargs)
 
     def create_index(self,keys):

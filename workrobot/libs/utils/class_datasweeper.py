@@ -75,7 +75,7 @@ class BalancePanelConverter:
         # 调用index.get_level_values()获取索引的所有值，并调用index.drop_duplicates()删除重复值
         to_keep_index = self._index.get_level_values(self._drop_index).drop_duplicates()
         # 对每个固定索引的值循环
-        for row_label in sorted(set(result.index.get_level_values(self._keep_index))):
+        for row_label in sorted(set(self._index.get_level_values(self._keep_index))):
             # 获得单个固定索引值的DataFrame，删除包含NA值的列，并获取其索引值
             # 与上一轮循环获得的索引值to_keep_index做交集，作为下一轮循环的索引值
             to_keep_index = to_keep_index.intersection(self._data.loc[row_label].dropna().index)
@@ -102,7 +102,7 @@ class BalancePanelConverter:
         :rtype: str
         """
         fmt_str = 'Balanced Panel: {}\n'.format(self.name)
-        fmt_str = ''.join([fmt_str, 'Keeped index: {}\nKeeped index values: {}'.format(self._keep_index, ','.join(self._keep_fixed_index))])
+        fmt_str = ''.join([fmt_str, 'Fixed index: {}\nKept index values: {}'.format(self._keep_index, ','.join([str(item) for item in self._keep_fixed_index]))])
         return fmt_str
 
     @property
@@ -112,6 +112,50 @@ class BalancePanelConverter:
         :return: 返回对象的名称
         """
         return self._name
+
+
+class DeleteNARow:
+    """ 删除有缺失值的行
+
+    :param pd.DataFrame data: 数据
+    :param str func_name: 方法名称
+    :param str 固定索引: 变量名表
+    :return: 无返回值
+    """
+    def __init__(self, data=None, name='delete NA rows', axis=0,
+                 how='any', *args, **kwargs):
+        self._data = data
+        self._name = name
+        self._axis = axis
+        self._how = how
+        self._args = args
+        self._kwargs = kwargs
+
+    def __call__(self):
+        """ 回调函数
+
+        :return: 返回变换后的数据
+        :rtype: pandas.DataFrame
+        """
+        return self._data.dropna(axis=self._axis, how=self._how)
+
+    def __repr__(self):
+        """ 打印对象
+
+        :return: 返回对象信息
+        :rtype: str
+        """
+        fmt_str = 'Delete NA Rows, Mode: {}\n'.format(self._how)
+        return fmt_str
+
+    @property
+    def name(self):
+        """ 返回对象的名称
+
+        :return: 返回对象的名称
+        """
+        return self._name
+
 
 
 if __name__ == '__main__':

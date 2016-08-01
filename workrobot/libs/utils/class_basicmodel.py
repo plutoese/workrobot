@@ -54,6 +54,7 @@ class BasicModel:
         self._kwargs = kwargs
 
         self._result = OrderedDict()
+        self._result['statistics'] = self.statistics
 
     def __call__(self):
         """ 回调函数

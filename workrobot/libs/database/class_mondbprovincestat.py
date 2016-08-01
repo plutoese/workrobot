@@ -74,6 +74,12 @@ class MonDBProvinceStat(MonCollection):
         """
         return sorted(self.distinct('acode'))
 
+    @property
+    def acode_and_region(self):
+        return dict(set([(item['acode'],item['province'])
+                         for item in self.find({},projection={'_id':0,'acode':1,'province':1})]))
+
+
     def search_variable(self, var=None, exact=False):
         """ 查询变量
 
@@ -87,6 +93,28 @@ class MonDBProvinceStat(MonCollection):
         else:
             return self.find({'variable':{'$regex':var}})
 
+    def info(self):
+        """ 打印数据库基本信息
+
+        :return: 无返回值
+        """
+        print('='*80)
+        print('Collection provincestat infomation')
+        print('Variables: ')
+        i = 1
+        for item in sorted(self.variables):
+            print(i,': ',item)
+            i += 1
+        print('-'*80)
+        print('Period: ')
+        print(self.period)
+        print('-'*80)
+        print('Region: ')
+        acode_to_region_dict = self.acode_and_region
+        for code in self.acode:
+            print(code,': ',acode_to_region_dict[code])
+        print('='*80)
+
 if __name__ == '__main__':
     mongo = MongoDB()
     mdb = MonDatabase(mongodb=mongo, database_name='region')
@@ -97,6 +125,8 @@ if __name__ == '__main__':
 
     print(prostat.period)
     print(prostat.acode)
+    #print(prostat.acode_and_region)
+    prostat.info()
 
 
 
