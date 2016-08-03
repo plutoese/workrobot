@@ -192,8 +192,8 @@ method_name = 'describe'
 research_dataset.add_data_method(Describe(data=research_dataset.data),
                                  method_name=method_name, method_type=2)
 research_dataset.run()
-print(list(research_dataset.result[method_name]['statistics']))
-#print(research_dataset._analysis_result)
+print(list((research_dataset.result[method_name]).keys()))
+print(research_dataset)
 
 # 6. data mining
 

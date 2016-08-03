@@ -54,7 +54,6 @@ class BasicModel:
         self._kwargs = kwargs
 
         self._result = OrderedDict()
-        self._result['statistics'] = self.statistics
 
     def __call__(self):
         """ 回调函数
@@ -82,10 +81,6 @@ class BasicModel:
         """
         return self._name
 
-    @property
-    def statistics(self):
-        return self._result.keys()
-
 
 class Describe(BasicModel):
     def __init__(self, data=None, name='describe',*args, **kwargs):
@@ -106,7 +101,7 @@ if __name__ == '__main__':
     des = Describe(data)
     result = des()
     print(des)
-    print(list(des.statistics))
+    print(list(result.keys()))
 
 
 
