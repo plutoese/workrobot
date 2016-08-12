@@ -8,6 +8,8 @@ from libs.imexport.class_mongodb import MongoDB, MonDatabase
 from libs.utils.class_formatconverter import MongoDBToPandasFormat
 from libs.utils.class_datasweeper import BalancePanelConverter, DeleteNARow
 from libs.utils.class_basicmodel import Describe
+from libs.statmodel.class_reg import Reg
+from copy import deepcopy
 
 # 0. setup
 # 0.1 系统默认参数
@@ -142,8 +144,10 @@ while True:
         USER_DATAFRAME_INDEXES.append('year')
 
     # 查询
-    #USER_FILTER =  {'variable': {'$in': ['财政支出_抚恤和社会福利救济费', '供水量']}, 'year': {'$in': [2001]}}
+    #USER_FILTER =  {'variable': {'$in': ['企业数_工业_内资企业', '煤气、天然气供量_生活']}, 'year': {'$in': [1995]}}
     cursor = user_colllection.find(filter=USER_FILTER, projection=USER_PROJECTION, sort=USER_SORT)
+    if cursor.count() < 1:
+        continue
 
     # 2. to convert data
     mongoconverter = MongoDBToPandasFormat(cursor)
@@ -199,3 +203,13 @@ print(research_dataset)
 
 
 # 7. modeling
+# 用英文变量名替代中文变量名
+print('--------------- modelling---------------')
+
+
+if len(research_dataset.data.columns) > 1:
+    formula = '{} ~ {}'.format(research_dataset.data.columns[0],' + '.join(research_dataset.data.columns[1:]))
+    reg_obj = Reg(data=research_dataset.data, formula=formula,var_transform=True)
+    result = reg_obj()
+    print(reg_obj)
+    reg_obj.coefs.to_excel('d:/temp/myresult.xls')

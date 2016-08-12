@@ -3,7 +3,7 @@
 import rpy2
 from rpy2 import robjects
 from rpy2.robjects.packages import importr
-from rpy2.robjects import IntVector, FloatVector, Formula, numpy2ri, Vector
+from rpy2.robjects import IntVector, FloatVector, Formula, numpy2ri, Vector, Matrix, DataFrame
 import numpy as np
 
 
@@ -57,19 +57,43 @@ print([x for x in robjects.r.baseenv()])
 # 注意此时在R中已经有weight和group两个变量
 lm_D9 = stats.lm("weight ~ group")
 
-print(stats.anova(lm_D9), type(stats.anova(lm_D9)))
+#print(stats.anova(lm_D9), type(stats.anova(lm_D9)))
 
 # 每个R对象都有name属性
-print(lm_D9.names, type(lm_D9.names))
+print('I am here', type(lm_D9), isinstance(lm_D9, Matrix), isinstance(lm_D9, DataFrame))
+#print(lm_D9.names, type(lm_D9.names))
+for item in lm_D9.names:
+    print(item, type(lm_D9[lm_D9.names.index(item)]))
+print(type(lm_D9[-2]),lm_D9[-2])
+print('****************************')
+
 
 # 解析R对象
 print(lm_D9.rx('coefficients'), type(lm_D9.rx('coefficients')))
 print(lm_D9.rx2('coefficients'), type(lm_D9.rx2('coefficients')))
-print(lm_D9[0])
+print(lm_D9[0], type(lm_D9[0]),list(lm_D9[0].names))
+print(lm_D9.rx2('call'))
+print(type(lm_D9.rx2('call')), len(list(lm_D9.rx2('call').names)), len(np.array(lm_D9.rx2('call'))))
+lm_D9_call = lm_D9.rx2('call')
+for item in lm_D9_call:
+    print('&&&&&&&&&&&&&&&&&&&&&&&')
+    print(item)
+    print('~~~~~~~~~~~~~~~~~~~~~~~')
 
+print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+print(lm_D9.names)
+for i in range(len(lm_D9)):
+    item = lm_D9[i]
+    if 'names' in dir(item):
+        print(i, lm_D9.names[i], type(item), len(item), item.names)
+
+
+'''
 # 这里使用Formula形式
 # 这里的weight ~ group是表达式
 fmla = Formula('weight ~ group')
+print(type(fmla.__repr__()))
+
 # 使用OLS
 fit1 = stats.lm(fmla)
 print(fit1.names)
@@ -117,4 +141,4 @@ d2 = {'a': np.array([1,2,3]), 'b': np.array([4.2,2.4,3.6])}
 dataf2 = robjects.DataFrame(d2)
 print(dataf2, type(dataf2))
 
-numpy2ri.deactivate()
+numpy2ri.deactivate()'''

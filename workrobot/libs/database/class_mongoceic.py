@@ -119,7 +119,7 @@ if __name__ == '__main__':
     mongo = MongoDB()
     mdb = MonDatabase(mongodb=mongo, database_name='region')
     prostat = MonDBCEIC(database=mdb)
-    print(prostat.variables)
+    print(len(prostat.variables))
     for item in prostat.search_variable('生产').distinct('variable'):
         print(item)
 
