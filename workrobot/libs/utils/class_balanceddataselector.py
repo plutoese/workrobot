@@ -24,16 +24,9 @@ BalancedDataSelector
 ==================
 """
 
-import re
-import numpy as np
 import pickle
 import random
-import pandas as pd
 from collections import defaultdict
-from copy import deepcopy
-from collections import OrderedDict
-from itertools import combinations, product
-from libs.imexport.class_mongodb import MongoDB, MonDatabase, MonCollection
 
 
 class BalancedDataSelector:
@@ -93,7 +86,7 @@ class BalancedDataSelector:
                                   if (len(union_key_dict[key]) <= max_na_number_per_variable) and (len(key) == round)}
 
             # --------此处测试打印--------
-            print('round: {}, length: {}'.format(round, len(union_key_dict_deleted)))
+            # print('round: {}, length: {}'.format(round, len(union_key_dict_deleted)))
             # --------此处测试打印--------
 
             # 如果删除了所有的项，那么就停止循环
@@ -189,18 +182,49 @@ class BalancedDataSelector:
         # 调用assembly方法
         selected_dataframe = BalancedDataSelector.assembly(single_variable_false_position_dict, max_na_number_per_variable)
 
-        # 把返回的结果重新关联到原有的数据框
+        return self._pack_back(selected_dataframe, indexes_mapping, columns_mapping)
+
+    def _pack_back(self, dframe=None, index_mapping=None, column_mapping=None):
+        """ 把装配的结果打包返回
+
+        :param dict dframe: 装配的结果
+        :param dict index_mapping: 行索引映射
+        :param dict column_mapping: 列索引映射
+        :return: 返回数据框变量的字典
+        :rtype: 字典
+        """
         _dataframe = dict()
-        for i in selected_dataframe:
-            _dataframe[i] = dict()
-            for j in selected_dataframe[i]:
+
+        for i in dframe:
+            for j in dframe[i]:
                 _key = []
                 for key in j:
-                    _key.extend(columns_mapping[key])
+                    _key.extend(column_mapping[key])
                 _key = frozenset(_key)
-                _dataframe[i][_key] = [indexes_mapping[key] for key in selected_dataframe[i][j]]
+                _dataframe[_key] = [index_mapping[key] for key in dframe[i][j]]
 
-        return _dataframe
+        # 忽略子集
+        _no_child_dataframe = dict()
+        for key in _dataframe:
+            is_subset = False
+            if len(_no_child_dataframe) < 1:
+                _no_child_dataframe[key] = _dataframe[key]
+                continue
+            for check_key in _no_child_dataframe:
+                if key.issubset(check_key):
+                    is_subset = True
+                    break
+            if not is_subset:
+                _no_child_dataframe[key] = _dataframe[key]
+
+        # 合并没有na的那些变量
+        cols_without_na = self.data_without_na.columns
+        con_dataframe = dict()
+        for key in _no_child_dataframe:
+            con_dataframe[key.union(set(cols_without_na))] = _no_child_dataframe[key]
+
+        return con_dataframe
+
 
 if __name__ == '__main__':
     '''
@@ -221,7 +245,7 @@ if __name__ == '__main__':
     '''
     F = open(r'E:\github\workrobot\workrobot\files\ceic_raw_data_year.pkl', 'rb')
     raw_data = pickle.load(F)
-    df = raw_data.loc[2010]
+    df = raw_data.loc[2013]
     #df = df.iloc[0:500,0:80]
     #df = df.loc[:, ['互联网宽帶接入用户','从业人数_制造业','人口数','从业人员']]
     df_bool = df.isnull()
@@ -236,10 +260,8 @@ if __name__ == '__main__':
 
     # 输出结果打印
     print('\n\n=======================result=====================')
-    for i in sorted(result):
-        print('Variable Numbers: {}'.format(i))
-        for key in result[i]:
-            print(key,' --> ',result[i][key])
+    for key in sorted(result):
+        print(key,' --> ',result[key])
         print('\n')
 
 
@@ -250,12 +272,10 @@ if __name__ == '__main__':
     MIN_NUMBER = len(df.index) - max_na_number_per_variable
     # variable numbers
     for i in range(CHECK_TIMES):
-        # variable numbers
-        number_variable_choice = random.choice(list(result.keys()))
         # 随机选择其中一项
-        item_choice = random.choice(list(result[number_variable_choice]))
-        print('first line\n', item_choice, result[number_variable_choice][item_choice])
-        print('second line\n', df.loc[result[number_variable_choice][item_choice],list(item_choice)])
+        item_choice = random.choice(list(result))
+        print('first line\n', item_choice, result[item_choice])
+        print('second line\n', df.loc[result[item_choice],list(item_choice)])
         #print(df_bool.loc[result[number_variable_choice][item_choice],list(item_choice)])
         mdata = df.loc[:,list(item_choice)]
         #mdata = df.loc[:,['互联网宽帶接入用户','从业人数_制造业','人口数','从业人员']]

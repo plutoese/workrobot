@@ -6,7 +6,7 @@ Python调用R语言类
 =========================================
 
 :Author: glen
-:Date: 2016.8.2
+:Date: 2016.8.18
 :Tags: model R
 :abstract: 主要用于对R语言的调用
 
@@ -16,8 +16,17 @@ REnv
     R语言环境，创建R实例，在Python中进行R语言调用
 
 
-**使用方法**
+**示范代码**
 ==================
+::
+
+    >>># 创建R环境
+    >>>r_env = REnv()
+    >>># 把R格式的数据转换为Python数据格式
+    >>>print(r_env[robjects.StrVector('abc')])
+    >>># 返回MongoDB中的数据库列表
+    >>>print(mongo.client.database_names())
+    >>># 返回MongoDB数据库中数据集合列表
 
 
 """
@@ -29,6 +38,7 @@ from rpy2.rinterface import RNULLType
 from rpy2.robjects.packages import importr
 from rpy2.robjects import Vector, FloatVector, Matrix, DataFrame, ListVector, Formula, numpy2ri
 from libs.imexport.class_statadata import Statadata
+import rpy2.robjects.packages as rpackages
 
 
 class REnv:
@@ -95,10 +105,19 @@ class REnv:
             pdata.index = indexes
             return pdata
         elif isinstance(item, Matrix):
-            return pd.DataFrame(np.matrix(item),index=item.rownames,columns=item.colnames)
+            if isinstance(item.rownames, RNULLType) and isinstance(item.colnames, RNULLType):
+                return pd.DataFrame(np.matrix(item))
+            elif isinstance(item.rownames, RNULLType):
+                return pd.DataFrame(np.matrix(item),columns=item.colnames)
+            elif isinstance(item.colnames, RNULLType):
+                return pd.DataFrame(np.matrix(item),index=item.rownames)
+            else:
+                return pd.DataFrame(np.matrix(item),index=item.rownames,columns=item.colnames)
         elif isinstance(item, ListVector):
             result = dict()
             for unit in item.names:
+                if unit == 'family':
+                    continue
                 result[unit] = self.__getitem__(item[item.names.index(unit)])
             return result
         elif isinstance(item, Formula):
@@ -116,6 +135,8 @@ class REnv:
                     else:
                         series = pd.Series(np.array(item))
                 return series
+        elif isinstance(item, RNULLType):
+            return None
         else:
             print('Unknow type: ', type(item))
             raise Exception
@@ -131,18 +152,21 @@ class REnv:
 if __name__ == '__main__':
     r_env = REnv()
     print(r_env[robjects.StrVector('abc')])
+    print(type(r_env[robjects.StrVector('abc')]))
     print(isinstance(robjects.StrVector('abc'), DataFrame))
     print(r_env[importr('base').pi])
     v = robjects.FloatVector([1.1, 2.2, 3.3, 4.4, 5.5, 6.6])
     m = robjects.r['matrix'](v, nrow = 2)
-    print(type(m), isinstance(m, DataFrame))
+    print(type(m))
     print(np.array(m))
+    print(r_env[m])
 
     d = {'a': robjects.IntVector((1,2,3)), 'b': robjects.IntVector((4,5,6))}
     dataf = robjects.DataFrame(d)
     print(isinstance(dataf,Vector))
     print(r_env[dataf])
 
+    '''
     print('='*80)
 
     # 创建R形式的变量
@@ -162,6 +186,7 @@ if __name__ == '__main__':
     for key in result:
         print(key, ' -- ', result[key])
 
+
     print('++++++++++++++++++++++++++++++')
     print(type(r_env.python_to_r_object([1,2,3])))
     d = pd.DataFrame({'one' : [1., 2., 3., 4.],'two' : [4., 3., 2., 1.]})
@@ -172,6 +197,7 @@ if __name__ == '__main__':
     print(r_env['x'])
     print(type(r_env['x']))
 
+    '''
     print('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
     stata_file = r'D:\data\test\wage1.dta'
     stdata = Statadata(stata_file)

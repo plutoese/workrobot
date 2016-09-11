@@ -1,0 +1,81 @@
+Cigar                   Cigarette Consumption
+Crime                   Crime in North Carolina
+EmplUK                  Employment and Wages in the United Kingdom
+Gasoline                Gasoline Consumption
+Grunfeld                Grunfeld's Investment Data
+Hedonic                 Hedonic Prices of Census Tracts in the Boston
+                        Area
+LaborSupply             Wages and Hours Worked
+Males                   Wages and Education of Young Males
+Parity                  Purchasing Power Parity and other parity
+                        relationships
+Produc                  US States Production
+RiceFarms               Production of Rice in India
+Snmesp                  Employment and Wages in Spain
+SumHes                  The Penn World Table, v. 5
+Wages                   Panel Data of Individual Wages
+aneweytest              Chamberlain estimator and test for fixed
+                        effects
+cipstest                Cross-sectionally Augmented IPS Test for Unit
+                        Roots in Panel Models
+dynformula              Dynamic Formula
+ercomp                  Estimation of the error components
+fixef.plm               Extract the Fixed Effects
+index                   Extract the indexes of panel data
+mtest                   Arellano-Bond test of Serial Correlation
+nobs.panelmodel         Extract Total Number of Observations Used in
+                        Estimated Panelmodel
+pFormula                pFormula: An extended Formula interface for
+                        panel data
+pFtest                  F Test for Individual and/or Time Effects
+pbgtest                 Breusch-Godfrey Test for Panel Models
+pbltest                 Baltagi and Li Serial Dependence Test For
+                        Random Effects Models
+pbsytest                Bera, Sosa-Escudero and Yoon Locally-Robust
+                        Lagrange Multiplier Tests for Panel Models
+pcce                    Common Correlated Effects estimators
+pcdtest                 Tests of cross-section dependence for panel
+                        models
+pdata.frame             data.frame for panel data
+pdim                    Check for the Dimensions of the Panel
+pdwtest                 Durbin-Watson Test for Panel Models
+pggls                   General FGLS Estimators
+pgmm                    Generalized Method of Moments (GMM) Estimation
+                        for Panel Data
+pht                     Hausman-Taylor Estimator for Panel Data
+phtest                  Hausman Test for Panel Models
+piest                   Chamberlain estimator and test for fixed
+                        effects
+plm                     Panel Data Estimators
+plm.data                Data Frame Special Format for Panel Data
+plmtest                 Lagrange Multiplier Tests for Panel Models
+pmg                     Mean Groups (MG), Demeaned MG and CCE MG
+                        estimators
+pmodel.response         A function to extract the model.response
+pooltest                Test of Poolability
+pseries                 panel series
+purtest                 Unit root tests for panel data
+pvar                    Check for Cross-Sectional and Time Variation
+pvcm                    Variable Coefficients Models for Panel Data
+pwartest                Wooldridge Test for AR(1) Errors in FE Panel
+                        Models
+pwfdtest                Wooldridge first-difference-based test for
+                        AR(1) errors in levels or first-differenced
+                        panel models
+pwtest                  Wooldridge's Test for Unobserved Effects in
+                        Panel Models
+r.squared               R squared and adjusted R squared for panel
+                        models
+sargan                  Hansen-Sargan Test of Overidentifying
+                        Restrictions
+vcovBK                  Beck and Katz Robust Covariance Matrix
+                        Estimators
+vcovDC                  Double-Clustering Robust Covariance Matrix
+                        Estimator
+vcovG                   Generic Lego building block for Robust
+                        Covariance Matrix Estimators
+vcovHC                  Robust Covariance Matrix Estimators
+vcovNW                  Newey and West(1987) Robust Covariance Matrix
+                        Estimator
+vcovSCC                 Driscoll and Kraay (1998) Robust Covariance
+                        Matrix Estimator

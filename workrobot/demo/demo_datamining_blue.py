@@ -38,8 +38,7 @@ print(num_favorable_by_movie.sort_values("Favorable", ascending=False)[:5])
 
 print('-------------------Apriori------------------')
 
-
-
+# 关键是理解这个函数
 def find_frequent_itemsets(favorable_reviews_by_users, k_1_itemsets, min_support):
     counts = defaultdict(int)
     for user, reviews in favorable_reviews_by_users.items():
@@ -79,3 +78,5 @@ for k in range(2, 20):
         frequent_itemsets[k] = cur_frequent_itemsets
 # We aren't interested in the itemsets of length 1, so remove those
 del frequent_itemsets[1]
+
+print(frequent_itemsets)

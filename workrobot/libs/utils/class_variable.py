@@ -78,6 +78,7 @@ class VariableCreator:
         :rtype: pandas.DataFrame
         """
         if self._mode == 'append':
+            print(self._func)
             self._data[self._new_variable_name] = self._func(self._data[self._variable_names], *self._args, **self._kwargs)
         else:
             self._data[self._variable_names] = self._func(self._data[self._variable_names], *self._args, **self._kwargs)
