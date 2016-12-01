@@ -165,8 +165,6 @@ class RegionMatcher:
                     search_end = int(all_matched.loc[m]['cid'])
                     break
             # 可选择的区域
-            if re.match('石家庄',region):
-                print(self._to_be_matched.loc[3])
             refer_regions = [self._to_be_compared.loc[n] for n in range(search_start+1,search_end)]
             # 构建映射：列表——每个元素为(区域名称，位置，可选择的匹配区域)
             refer_regions_map.append((region,i,refer_regions))
@@ -186,6 +184,11 @@ class RegionMatcher:
         result = result.set_index('rid')
         return result
 
+    def match_by_search(self,year=None):
+        adivision = AdminDivision(year=year)
+        for ind in self.not_matched_region.index:
+            pass
+
     @property
     def accuracy(self):
         accuracy = 100*(RegionMatcher.all_matched(self._result).shape[0]/(self._result.shape[0]))
@@ -201,7 +204,11 @@ class RegionMatcher:
 
     @property
     def matched_region(self):
-        return self._result
+        return self._result[['origin','region','acode','matched']]
+
+    @property
+    def not_matched_region(self):
+        return RegionMatcher.not_matched(self._result[['origin','region','acode','matched']])
 
 if __name__ == '__main__':
     #rmatcher = RegionMatcher()

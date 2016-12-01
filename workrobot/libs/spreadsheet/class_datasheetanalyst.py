@@ -52,6 +52,11 @@ class DataSheetExtracter(DataSheetAnalyst):
         DataSheetAnalyst.__init__(self)
 
 
+class DataSheetReplacer(DataSheetAnalyst):
+    def __init__(self):
+        DataSheetAnalyst.__init__(self)
+
+
 class TransformToNoBlankRowsDF(DataSheetTransformer):
     def __init__(self,dframe=None):
         DataSheetTransformer.__init__(self)
@@ -262,10 +267,11 @@ class ExtractColumnVariable(DataSheetExtracter):
 
 
 class ExtractColumnMultiVariable(DataSheetExtracter):
-    def __init__(self, column_variable=None, decomposer={'unit':('middle','\(|\)|（|）')}):
+    def __init__(self, column_variable=None, decomposer={'unit':('middle','\(|\)|（|）')}, double_column=False):
         DataSheetExtracter.__init__(self)
         self._column_variable = column_variable
         self._decomposer = decomposer
+        self._double_column = double_column
 
     def __call__(self):
         multi_variable = dict()
@@ -313,6 +319,9 @@ class ExtractColumnMultiVariable(DataSheetExtracter):
             # 去除multi_variable中所有值为None的键
             for to_be_deleted in [key for key in multi_variable if len(set(multi_variable[key])) == 1 and set(multi_variable[key]).pop() is None]:
                 multi_variable.pop(to_be_deleted)
+            if self._double_column:
+                for key in multi_variable:
+                    multi_variable[key] = multi_variable[key][0:int(len(multi_variable[key])/2)]
             return multi_variable
 
     @staticmethod
@@ -340,8 +349,68 @@ class ExtractColumnMultiVariable(DataSheetExtracter):
             return None
 
 
+class ExtractDataTableWithRowVariable(DataSheetExtracter):
+    def __init__(self, dframe=None, data_rows=None, data_columns=None):
+        DataSheetExtracter.__init__(self)
+        self._dframe = dframe
+        self._data_rows = data_rows
+        self._data_columns = data_columns
+        self._row_variable_column = sorted(list(set(range(self._dframe.shape[1]))-set(self._data_columns)))
+        self._double_column = len(self._row_variable_column)==2
+
+    def __call__(self):
+        if self._double_column:
+            the_start = self._data_rows[0]
+            the_end = None
+            the_region = []
+            for i in range(self._data_rows[0], self._data_rows[-1] + 2):
+                if i not in self._data_rows and the_end is None:
+                    the_end = i
+                    the_region.append(self._dframe.iloc[the_start:the_end, range(self._row_variable_column[0], self._row_variable_column[1])])
+                    p2 = self._dframe.iloc[the_start:the_end,
+                         range(self._row_variable_column[1], self._dframe.shape[1])].rename(columns=dict(zip(range(self._row_variable_column[1], self._dframe.shape[1]),
+                                                                                                             range(self._row_variable_column[0], self._row_variable_column[1]))))
+                    the_region.append(p2)
+                    the_start = None
+                if i in self._data_rows and the_start is None:
+                    the_start = i
+                    the_end = None
+
+            pdata = pd.concat(the_region)
+            return pdata[pdata.notnull().any(axis=1)]
+        else:
+            return self._dframe.iloc[self._data_rows,]
+
+
+class ReplaceRegion(DataSheetReplacer):
+    def __init__(self, regions=None, year=None, top_level=1, down_level=3, correction=None):
+        DataSheetReplacer.__init__(self)
+        self._regions = regions
+        self._year = year
+        self._top_level = top_level
+        self._down_level = down_level
+        self._correction = correction
+
+        if isinstance(regions,(list,tuple)):
+            self._to_be_matched = pd.DataFrame(self._regions, columns=['region'])
+        elif isinstance(regions,pd.Series):
+            self._to_be_matched = pd.DataFrame(self._regions.values, columns=['region'])
+        elif isinstance(regions,pd.DataFrame):
+            self._to_be_matched = pd.DataFrame(self._regions[0].values, columns=['region'])
+        else:
+            print('Unsupported Type',type(regions))
+            raise Exception
+
+    def __call__(self):
+        region_matcher = RegionMatcher(self._to_be_matched, year=self._year)
+        region_matcher.place_anchor(type='match')
+        region_matcher.matching_using_region_set()
+        if self._correction is not None:
+            region_matcher.matching_using_correction(self._correction)
+        return region_matcher.matched_region
+
 if __name__ == '__main__':
-    rdata = pd.read_excel(r'E:\data\citystat\transform\3_1_人口_地级市_2000.xls',sheetname=0,header=None)
+    rdata = pd.read_excel(r'E:\data\citystat\transform\sample1.xls',sheetname=0,header=None)
     rdata = TransformToNoBlankRowsDF(dframe=rdata)()
     rdata = TransformToNoBlankColumnsDF(dframe=rdata)()
     print(rdata)
@@ -352,11 +421,12 @@ if __name__ == '__main__':
                                        split_fn=Rule.row_with_specified_first_word,specified_word='^(\d-\d)|(\d—\d)|(城市)')()
     print(data_rows)
     print(rdata.iloc[data_rows,])
+
     title_row = LocateTitle(dframe=rdata,data_start=data_rows[0])()
     #rdata.iloc[data_rows,].to_excel(r'E:\data\popcensus\origin\output2.xls')
     unit = LocateUnit(dframe=rdata,data_start=data_rows[0])()
     variable_rows = LocateColumnVariable(dframe=rdata,data_start=data_rows[0],title_row=title_row,unit_row=unit)()
-    print(title_row,rdata.iloc[title_row,])
+    print('hhhh',title_row,rdata.iloc[title_row,])
     print(unit)
     print(variable_rows,rdata.iloc[variable_rows,])
 
@@ -365,20 +435,37 @@ if __name__ == '__main__':
 
     multi_variable = ExtractColumnMultiVariable(column_variable=column_variable,
                                                 decomposer={'unit':('middle','\(|\)|（|）'),
-                                                            'boundary':('theone','地区|市区')})()
+                                                            'boundary':('theone','地区|市区')},
+                                                double_column=len(set(range(rdata.shape[1]))-set(data_columns))==2)()
     variable = multi_variable.get('variable')
     units = multi_variable.get('unit')
     boundary = multi_variable.get('boundary')
     print(variable,units,boundary)
+    print(len(set(range(rdata.shape[1]))-set(data_columns))==1,sorted(list(set(range(rdata.shape[1]))-set(data_columns))))
+    print(rdata.shape[1])
 
+    data_table_with_row_var = ExtractDataTableWithRowVariable(dframe=rdata,data_rows=data_rows,data_columns=data_columns)()
+    print(data_table_with_row_var)
+    data_table_with_row_var.to_excel(r'E:\data\citystat\transform\double1.xlsx')
+
+    print(pd.DataFrame(data_table_with_row_var.iloc[:,0].values, columns=['region']))
+    region_matcher = RegionMatcher(pd.DataFrame(data_table_with_row_var.iloc[:,0].values, columns=['region']), year=2010, down_level=3)
+    region_matcher.place_anchor(type='match')
+    result2 = region_matcher.output_of_region_set_mapping
+    result2.to_excel(r'E:\data\citystat\transform\test3.xls')
+    region_matcher.matching_using_region_set()
+    print(region_matcher.not_matched_region)
+    region_matcher.matched_region.to_excel(r'E:\data\citystat\transform\test6.xlsx')
+    '''
     collection_variable = MonCollection(database=MonDatabase(mongodb=MongoDB(),
                                                              database_name='variable'),
                                         collection_name='referencevariable')
     refer_variables = collection_variable.find().distinct('variable')
     bmatcher = BulkMatcher(variable)
-    print(bmatcher.matching(refer_variables,type='fuzzy'))
+    print(bmatcher.matching(refer_variables,type='fuzzy',error_percent=0.4))
 
     region_columns = sorted(set(range(rdata.shape[1]))-set(data_columns))
+    print(region_columns)
     the_start = data_rows[0]
     the_end = None
     the_region = []
@@ -389,7 +476,7 @@ if __name__ == '__main__':
             p2 = rdata.iloc[the_start:the_end, range(3, 6)].rename(columns=dict(zip(range(3,6),range(0,3))))
             the_region.append(p2)
             the_start = None
-            print(rdata.iloc[the_start:the_end,range(3,6)])
+            #print(rdata.iloc[the_start:the_end,range(3,6)])
         if i in data_rows and the_start is None:
             the_start = i
             the_end = None
@@ -403,16 +490,15 @@ if __name__ == '__main__':
     print(regions)
     regions.to_excel(r'E:\data\citystat\transform\test.xls')
 
-
     region_matcher = RegionMatcher(regions, year=2000)
     region_matcher.place_anchor(type='match')
     region_matcher.matching_using_region_set()
     result2 = region_matcher.output_of_region_set_mapping
     result2.to_excel(r'E:\data\citystat\transform\test3.xls')
     print('Accuracy Rate: {:.2f}%.'.format(region_matcher.accuracy))
-    region_matcher.matching_using_correction(r'E:\data\citystat\transform\replace.xls')
+    #region_matcher.matching_using_correction(r'E:\data\citystat\transform\replace.xls')
     result = region_matcher.matched_region
     print(result)
-    result.to_excel(r'E:\data\citystat\transform\test6.xlsx')
+    result.to_excel(r'E:\data\citystat\transform\test6.xlsx')'''
 
 

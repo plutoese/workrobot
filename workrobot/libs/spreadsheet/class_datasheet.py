@@ -74,6 +74,8 @@ class DataSheet:
                     self._info['column_variable'] = operation.get('operation')()
                 if isinstance(operation.get('operation'),ExtractColumnMultiVariable):
                     self._info.update(operation.get('operation')())
+                if isinstance(operation.get('operation'),ExtractDataTableWithRowVariable):
+                    self._info['data_table_with_row_variable'] = operation.get('operation')()
             else:
                 print('undefined operation')
                 raise Exception
@@ -116,13 +118,18 @@ if __name__ == '__main__':
                                                                                     title_row=mdatasheet.location['title'],
                                                                                     unit_row=mdatasheet.location['unit'])})
 
-    mdatasheet.add_to_work_flow({'name': '定位变量行', 'operation': ExtractColumnVariable(dframe=mdatasheet.data,
+    mdatasheet.add_to_work_flow({'name': '合并变量行', 'operation': ExtractColumnVariable(dframe=mdatasheet.data,
                                                                                     variable_column=mdatasheet.location['data_column'],
                                                                                     variable_row=mdatasheet.location['column_variable_row'])})
 
     mdatasheet.add_to_work_flow({'name': '分解变量', 'operation': ExtractColumnMultiVariable(column_variable=mdatasheet.info['column_variable'],
                                                                                          decomposer={'unit':('middle','\(|\)|（|）'),
-                                                                                                     'boundary':('theone','地区|市区')})})
+                                                                                                     'boundary':('theone','地区|市区')},
+                                                                                         double_column=len(set(range(mdatasheet.data.shape[1]))-set(mdatasheet.location['data_column']))==2)})
+    mdatasheet.add_to_work_flow({'name': '带行变量的数据表格', 'operation': ExtractDataTableWithRowVariable(dframe=mdatasheet.data,
+                                                                                                   data_rows=mdatasheet.location['data_row'],
+                                                                                                   data_columns=mdatasheet.location['data_column'])})
+
     print(mdatasheet.location)
     print(mdatasheet.info)
 

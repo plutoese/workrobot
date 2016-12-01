@@ -39,7 +39,7 @@ class Rule:
                 return True
             else:
                 if specified_word is not None:
-                    if re.match(specified_word, str(row.iloc[0])) is not None:
+                    if re.match(specified_word, re.sub('\s+','',str(row.iloc[0]))) is not None:
                         return True
                     else:
                         return False
