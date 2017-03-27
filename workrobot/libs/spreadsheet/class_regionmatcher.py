@@ -26,6 +26,7 @@ RegionMatcher
 
 import os
 import re
+import regex
 import pandas as pd
 from dbadmin.admindivision.class_admindivision import AdminDivision
 
@@ -129,12 +130,18 @@ class RegionMatcher:
         if os.path.isfile(correction):
             file_data = pd.read_excel(correction)
             column = file_data.columns[0]
+            indexes = list(self._result.index)
             for ind in file_data.index:
-                found_region = self._admin_division[file_data.loc[ind,'replace']]
-                self._result.loc[file_data.loc[ind,column]==self._result[column],column] = file_data.loc[ind,'replace']
-                print(self._result.loc[file_data.loc[ind,'replace']==self._result[column], 'matched'],found_region['region'].values[0])
-                self._result.loc[file_data.loc[ind,'replace']==self._result[column], 'matched'] = found_region['region'].values[0]
-                self._result.loc[file_data.loc[ind,'replace']==self._result[column], 'acode'] = found_region['acode'].values[0]
+                if file_data.loc[ind,'replace'] == -1:
+                    if self._result.loc[file_data.loc[ind,column]==self._result[column],column].size > 0:
+                        indexes.pop(indexes.index(self._result.loc[file_data.loc[ind,column]==self._result[column],column].index.values[0]))
+                else:
+                    found_region = self._admin_division[file_data.loc[ind,'replace']]
+                    self._result.loc[file_data.loc[ind,column]==self._result[column],column] = file_data.loc[ind,'replace']
+                    #print(self._result.loc[file_data.loc[ind,'replace']==self._result[column], 'matched'],found_region['region'])
+                    self._result.loc[file_data.loc[ind,'replace']==self._result[column], 'matched'] = found_region['region'].values[0]
+                    self._result.loc[file_data.loc[ind,'replace']==self._result[column], 'acode'] = found_region['acode'].values[0]
+            self._result = self._result.loc[indexes,:]
         elif isinstance(correction,dict):
             pass
         else:
@@ -184,10 +191,36 @@ class RegionMatcher:
         result = result.set_index('rid')
         return result
 
-    def match_by_search(self,year=None):
-        adivision = AdminDivision(year=year)
-        for ind in self.not_matched_region.index:
-            pass
+    def auto_correction(self,error='auto'):
+        """ 返回自动纠错匹配结果
+
+        :param error: 允许错误数量
+        :return: 返回自动纠错匹配结果
+        """
+        correction = []
+        map = self.region_set_mapping
+        for record in map:
+            region = record[0]
+            index = record[1]
+            refer_regions = record[2]
+            if len(refer_regions) == 1:
+                correction.append(([region,index,refer_regions[0]['region'],refer_regions[0]['acode'],refer_regions[0]['cid']]))
+            else:
+                for n in range(len(refer_regions)):
+                    if self.fuzzy_region_matching(region,refer_regions[n]['region'],error):
+                        correction.append([region,index,refer_regions[n]['region'],refer_regions[n]['acode'],refer_regions[n]['cid']])
+
+        correction = pd.DataFrame(correction,columns=['region','rid','matched','acode','cid'])
+        correction = correction.set_index('rid')
+
+        return correction
+
+    @staticmethod
+    def fuzzy_region_matching(region, compared, error='auto'):
+        if re.match('^auto$', error) is not None:
+            error = max(1, int(len(region) * 0.5))
+
+        return regex.fullmatch('(?:%s){e<=%s}' % (region, str(error)), compared) is not None
 
     @property
     def accuracy(self):

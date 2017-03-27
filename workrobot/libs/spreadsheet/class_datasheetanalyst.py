@@ -57,6 +57,11 @@ class DataSheetReplacer(DataSheetAnalyst):
         DataSheetAnalyst.__init__(self)
 
 
+class DataSheetCorrector(DataSheetAnalyst):
+    def __init__(self):
+        DataSheetAnalyst.__init__(self)
+
+
 class TransformToNoBlankRowsDF(DataSheetTransformer):
     def __init__(self,dframe=None):
         DataSheetTransformer.__init__(self)
@@ -152,7 +157,7 @@ class LocateDataTableRows(DataSheetLocator):
                 func=Rule.row_with_all_numeric_or_nan_in_position,
                 position=range(0,five_row_data_sheet.shape[1]),
                 axis=1)
-
+            #print(five_row_data_sheet,five_rows_rdata_bool)
             if five_rows_rdata_bool.all():
                 if not Rule.row_with_only_first_item_above_length(sheet_data.iloc[i]):
                     data_start = i
@@ -200,7 +205,7 @@ class LocateUnit(DataSheetLocator):
         self._unit_matcher = unit_matcher
 
     def __call__(self):
-        unit_pdata = self._dframe.applymap(lambda x: re.match(self._unit_matcher, str(x)) is not None)
+        unit_pdata = self._dframe.applymap(lambda x: re.match(self._unit_matcher, re.sub('\s+','',str(x))) is not None)
         possible_unit = self._dframe.loc[unit_pdata.any(axis=1), unit_pdata.any(axis=0)]
 
         if possible_unit.size > 0:
@@ -228,6 +233,28 @@ class LocateColumnVariable(DataSheetLocator):
                 if not Rule.row_with_only_first_item(self._dframe.iloc[i]):
                     column_variable_row_numbers.append(i)
         return column_variable_row_numbers
+
+
+class LocateOtherRows(DataSheetLocator):
+    def __init__(self,dframe=None, title_row=None, unit_row=None, variable_row=None, data_row=None):
+        DataSheetLocator.__init__(self)
+        self._dframe = dframe
+        self._title_row = title_row
+        self._unit_row = unit_row
+        self._variable_row = variable_row
+        self._data_row = data_row
+
+    def __call__(self):
+        ind = set(range(self._dframe.shape[0]))
+        if self._title_row > -1:
+            ind = ind - set([self._title_row])
+        if self._unit_row > -1:
+            ind = ind - set([self._unit_row])
+
+        ind = ind - set(self._variable_row)
+        ind = ind - set(self._data_row)
+
+        return sorted(list(ind))
 
 
 class ExtractColumnVariable(DataSheetExtracter):
@@ -285,6 +312,7 @@ class ExtractColumnMultiVariable(DataSheetExtracter):
                 if item[0] == 'middle':
                     mid_vars = []
                     new_rest_vars = []
+                    #print('res',rest_vars)
                     for var in rest_vars:
                         result = ExtractColumnMultiVariable.in_the_middle(var,*item[1:])
                         if result is not None:
@@ -313,7 +341,7 @@ class ExtractColumnMultiVariable(DataSheetExtracter):
             # 去除变量名后不必要的_符号
             for rvar in rest_vars:
                 if re.search('\_$', rvar) is not None:
-                    multi_variable['variable'].append(rvar[0:-1])
+                    multi_variable['variable'].append('_'.join([item for item in re.split('\_+',rvar) if len(item) > 0]))
                 else:
                     multi_variable['variable'].append(rvar)
             # 去除multi_variable中所有值为None的键
@@ -333,7 +361,23 @@ class ExtractColumnMultiVariable(DataSheetExtracter):
                 middle_value = punit.pop()
                 rest_value = ''.join(vars[slice(0,len(vars),2)])
                 return middle_value, rest_value
+            elif len(punit) < 3:
+                state = None
+                for item in punit:
+                    if re.search('不变价$',re.sub('\s+','',str(item))) is not None:
+                        state = re.sub('\s+','',str(item))
+                    else:
+                        start_unit = re.sub('\s+','',str(item))
+                if state is None:
+                    print('Two many borders!')
+                    raise Exception
+                else:
+                    middle_value = start_unit
+                    rest_value = ''.join(vars[slice(0, len(vars), 2)])
+                    rest_value = '{}({})'.format(rest_value,state)
+                    return middle_value, rest_value
             else:
+                print('ppp',punit)
                 print('Two many borders!')
                 raise Exception
         else:
@@ -342,7 +386,7 @@ class ExtractColumnMultiVariable(DataSheetExtracter):
     @staticmethod
     def is_the_one(var_str=None, the_one=None):
         if re.search(the_one,var_str) is not None:
-            found = re.search(the_one,var_str).group()
+            found = re.search(''.join([the_one,'$']),var_str).group()
             rest = re.sub(found,'',var_str)
             return found, rest
         else:
@@ -382,6 +426,48 @@ class ExtractDataTableWithRowVariable(DataSheetExtracter):
             return self._dframe.iloc[self._data_rows,]
 
 
+class ExtractTitle(DataSheetExtracter):
+    def __init__(self, dframe=None, title_row=-1):
+        DataSheetExtracter.__init__(self)
+        self._dframe = dframe
+        self._title_row = title_row
+
+    def __call__(self):
+        if self._title_row == -1:
+            return None
+
+        return self._dframe.iloc[self._title_row,0]
+
+
+class ExtractUnit(DataSheetExtracter):
+    def __init__(self, dframe=None, unit_row=-1, units=None, unit_len=None):
+        DataSheetExtracter.__init__(self)
+        self._dframe = dframe
+        self._unit_row = unit_row
+        self._units = units
+        self._unit_len = unit_len
+
+    def __call__(self):
+        if self._unit_row == -1:
+            return self._units
+
+        for item in self._dframe.iloc[self._unit_row, :]:
+            item = re.sub('\s+','',str(item))
+            if re.match('单位(:|：)', str(item)) is not None:
+                general_unit = (re.split('(:|：)', str(item))[2])
+
+        units = []
+        if self._units is not None:
+            for item in self._units:
+                if item is None:
+                    units.append(general_unit)
+                else:
+                    units.append(item)
+            return units
+        else:
+            return [general_unit] * self._unit_len
+
+
 class ReplaceRegion(DataSheetReplacer):
     def __init__(self, regions=None, year=None, top_level=1, down_level=3, correction=None):
         DataSheetReplacer.__init__(self)
@@ -402,15 +488,117 @@ class ReplaceRegion(DataSheetReplacer):
             raise Exception
 
     def __call__(self):
-        region_matcher = RegionMatcher(self._to_be_matched, year=self._year)
+        region_matcher = RegionMatcher(self._to_be_matched, year=self._year,
+                                       top_level=self._top_level, down_level=self._down_level)
         region_matcher.place_anchor(type='match')
+        #region_matcher.output_of_region_set_mapping.to_excel(r'E:\data\citystat\generated\test.xlsx')
         region_matcher.matching_using_region_set()
         if self._correction is not None:
             region_matcher.matching_using_correction(self._correction)
-        return region_matcher.matched_region
+        return {'region':region_matcher.matched_region,
+                'unmatched_region':region_matcher.not_matched_region,
+                'auto_correction_region':region_matcher.auto_correction(),
+                'region_map':region_matcher.output_of_region_set_mapping}
+
+
+class ExtractnNonNumericRow(DataSheetExtracter):
+    def __init__(self, data_table=None):
+        DataSheetExtracter.__init__(self)
+        self._data_table = data_table
+
+    def __call__(self):
+        return self._data_table[~self._data_table.iloc[:, 1:].applymap(Rule.is_numeric_or_is_na).all(axis=1)]
+
+
+class ExtractStatement(DataSheetExtracter):
+    def __init__(self, dframe=None, other_row=-1, match_word=None):
+        DataSheetExtracter.__init__(self)
+        self._dframe = dframe
+        self._other_row = other_row
+        self._match_word = match_word
+
+    def __call__(self):
+        statement = []
+        for i in self._other_row:
+            if re.match(self._match_word,str(self._dframe.iloc[i,0])) is not None:
+                statement.append(re.sub('\s+','',str(self._dframe.iloc[i,0])))
+        if len(statement) < 1:
+            return None
+        elif len(statement) < 2:
+            return statement
+        else:
+            return statement
+
+
+class CorrectBoundary(DataSheetCorrector):
+    def __init__(self, boundary=None,boundary_correction={'地区':'全市','市区':'市辖区','建成区':'建成区'},
+                 title=None, user_boundary=None, boundary_len=None):
+        DataSheetCorrector.__init__(self)
+        self._boundary = boundary
+        self._boundary_correction=boundary_correction
+        self._title = title
+        self._user_boundary = user_boundary
+        self._boundary_len = boundary_len
+
+    def __call__(self):
+        boundary = self._boundary
+        if boundary is not None:
+            for i in range(len(boundary)):
+                if re.sub('\s+','',str(boundary[i])) in self._boundary_correction:
+                    boundary[i] = self._boundary_correction[re.sub('\s+','',str(boundary[i]))]
+            for item in boundary:
+                if item not in self._boundary_correction.values():
+                    print('{} not qualified!!!'.format(item))
+                    raise Exception
+        else:
+            title = self._title
+            split_title = re.split('\(',title)
+            if len(split_title) > 1:
+                for item in split_title[1:]:
+                    if re.split('\)', item)[0] == '不包括市辖县':
+                        boundary = ['市辖区'] * self._boundary_len
+                        break
+                    if re.split('\)', item)[0] == '包括市辖县':
+                        boundary = ['全市'] * self._boundary_len
+                        break
+                    if re.split('\)', item)[0] == '全市':
+                        boundary = ['全市'] * self._boundary_len
+                        break
+                    if re.split('\)', item)[0] == '市辖区':
+                        boundary = ['市辖区'] * self._boundary_len
+                        break
+                if boundary is None:
+                    if self._user_boundary is not None:
+                        boundary = [self._user_boundary] * self._boundary_len
+                    else:
+                        print('boundary is not Exist!!!!!')
+                        raise Exception
+            else:
+                if self._user_boundary is not None:
+                    boundary = [self._user_boundary] * self._boundary_len
+                else:
+                    print('boundary is not Exist!!!!!')
+                    raise Exception
+
+        return boundary
+
+
+class CorrectNonNumericDataRow(DataSheetCorrector):
+    def __init__(self, data_table=None, replace=None):
+        DataSheetCorrector.__init__(self)
+        self._data_table = data_table
+        self._replace = replace
+
+    def __call__(self):
+        data_table = self._data_table
+        for key in self._replace:
+            data_table = data_table.applymap(lambda x: re.sub(key,self._replace[key],str(x)))
+
+        return data_table
+
 
 if __name__ == '__main__':
-    rdata = pd.read_excel(r'E:\data\citystat\transform\sample1.xls',sheetname=0,header=None)
+    rdata = pd.read_excel(r'E:\data\citystat\transform\01.xls',sheetname=0,header=None)
     rdata = TransformToNoBlankRowsDF(dframe=rdata)()
     rdata = TransformToNoBlankColumnsDF(dframe=rdata)()
     print(rdata)
@@ -447,16 +635,41 @@ if __name__ == '__main__':
     data_table_with_row_var = ExtractDataTableWithRowVariable(dframe=rdata,data_rows=data_rows,data_columns=data_columns)()
     print(data_table_with_row_var)
     data_table_with_row_var.to_excel(r'E:\data\citystat\transform\double1.xlsx')
+    print(unit,units)
+    final_units = ExtractUnit(dframe=rdata,unit_row=unit,units=units)()
+    print(final_units)
 
+    region_data = ReplaceRegion(regions=data_table_with_row_var.iloc[:,0],year=2000,down_level=2,
+                                correction=r'E:\data\citystat\transform\replace.xls')()
+    print(region_data)
+    region_data.get('region_map').to_excel(r'E:\data\citystat\transform\region_map.xlsx')
+
+    rowvar = ['origin']
+    colvar = []
+    for i in range(len(variable)):
+        colvar.append('|'.join([variable[i],final_units[i],boundary[i]]))
+    rowvar.extend(colvar)
+    data_table_with_row_var.columns = rowvar
+    pdata = pd.merge(region_data.get('region'),data_table_with_row_var,on='origin')
+    pdata.to_excel(r'E:\data\citystat\transform\pdata.xlsx')
+
+    rrow = data_table_with_row_var[~data_table_with_row_var.iloc[:,1:].applymap(Rule.is_numeric_or_is_na).all(axis=1)]
+
+
+    '''
     print(pd.DataFrame(data_table_with_row_var.iloc[:,0].values, columns=['region']))
-    region_matcher = RegionMatcher(pd.DataFrame(data_table_with_row_var.iloc[:,0].values, columns=['region']), year=2010, down_level=3)
+    region_matcher = RegionMatcher(pd.DataFrame(data_table_with_row_var.iloc[:,0].values, columns=['region']), year=2010, down_level=2)
     region_matcher.place_anchor(type='match')
+    region_matcher.matching_using_region_set()
     result2 = region_matcher.output_of_region_set_mapping
     result2.to_excel(r'E:\data\citystat\transform\test3.xls')
-    region_matcher.matching_using_region_set()
     print(region_matcher.not_matched_region)
     region_matcher.matched_region.to_excel(r'E:\data\citystat\transform\test6.xlsx')
-    '''
+    region_matcher.not_matched_region.to_excel(r'E:\data\citystat\transform\replace1.xlsx')
+    print(region_matcher.auto_correction())
+    region_matcher.matching_using_correction(correction=r'E:\data\citystat\transform\replace.xls')
+    region_matcher.matched_region.to_excel(r'E:\data\citystat\transform\final.xlsx')
+
     collection_variable = MonCollection(database=MonDatabase(mongodb=MongoDB(),
                                                              database_name='variable'),
                                         collection_name='referencevariable')

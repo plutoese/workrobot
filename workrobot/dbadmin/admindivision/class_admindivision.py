@@ -170,13 +170,6 @@ class AdminDivision:
         :return: 返回查询得到的省级行政区划
         :rtype: pandas.DataFrame
         """
-        '''
-        province_postfix = u'省|市|自治区|维吾尔自治区|回族自治区|壮族自治区'
-        if province is not None:
-            province = re.split(province_postfix,re.sub('\s+','',province))[0]
-            province_pattern = ''.join(['^',province,'$'])
-        else:
-            province_pattern = '^$'''''
         if province is not None:
             return self.province[self.province['region'].apply(lambda x: re.match(''.join(['^',province]), x) is not None)]
         else:

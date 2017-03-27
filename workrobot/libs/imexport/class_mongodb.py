@@ -59,7 +59,7 @@ MongoDB中的数据库列表
 """
 
 from pymongo import MongoClient
-
+import pandas as pd
 
 class MongoDB:
     """ 连接MongoDB数据库
@@ -246,7 +246,20 @@ if __name__ == '__main__':
     print(mdb.collection_names)
     #mdb.create_collection('cities')
     #mdb.drop_collection('cities')
-    mcollection = MonCollection(database=mdb, collection_name='cities')
+    mcollection = MonCollection(database=mdb, collection_name='provincestat')
     #mcollection.insert([{'name':'Andy'}])
-    print(list(mcollection.find({'name':'Tom'})))
-    mcollection.close()
+    #print(list(mcollection.find({'name':'Tom'})))
+    #mcollection.close()
+
+    query_str = {
+        'province': '上海',
+        'variable': {'$in':['第一产业增加值', '第二产业增加值','第三产业增加值']}
+    }
+    found = mcollection.find(query_str,
+                             projection={'_id':0,'province':1,'variable':1,'value':1,'year':1},
+                             sort=[('year',1)])
+    rdata = [item for item in found]
+    mdata = pd.DataFrame(rdata)
+    print(mdata)
+
+    print(pd.pivot_table(mdata,values='value',index=['year'],columns=['variable']))

@@ -133,8 +133,12 @@ class Rule:
 
     @staticmethod
     def is_numeric_or_is_na(item):
-        if Rule.is_numeric(item) or pd.Series(item).isnull().all():
-            return True
+        if isinstance(item,(int,float)):
+            if Rule.is_numeric(item) or pd.Series(item).isnull().all():
+                return True
+        elif isinstance(item,str):
+            if Rule.is_numeric(item) or (re.match('nan',item) is not None):
+                return True
         return False
 
 if __name__ == '__main__':
