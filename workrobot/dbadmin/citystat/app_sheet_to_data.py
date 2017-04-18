@@ -8,12 +8,12 @@ from libs.spreadsheet.class_datasheet import DataSheet
 
 # 0. 初始化和参数设置
 # 读取配置文件
-CONFIG_FILE = r'E:\data\citystat\correction\config.ini'
+CONFIG_FILE = r'D:\data\citystat\correction\config.ini'
 config = configparser.ConfigParser()
 config.read(CONFIG_FILE,encoding='UTF-8')
 
 # 设置年份
-YEAR = 2007
+YEAR = 2011
 
 # 设置数据文件路径
 DATA_FILE_PATH = config['default']['DATA_FILE_PATH']
@@ -36,8 +36,8 @@ var_row_decomposer = {'unit': ('middle', config['var_row_decomposer'].get('unit'
 
 # 设置地区匹配规则
 match_region_year = YEAR
-match_region_down_level = int(config['prefecture2007']['match_region_down_level'])
-match_region_correction = config['prefecture2007']['match_region_correction']
+match_region_down_level = int(config['prefecture2011']['match_region_down_level'])
+match_region_correction = config['prefecture2011']['match_region_correction']
 
 # 设置区域范围用词
 correction_boundary = {key:config['boundary_correction'].get(key,raw=True) for key in config['boundary_correction']}
@@ -47,7 +47,7 @@ user_boundary = {}
 variable_pdata = None
 
 for i in range(len(FILES)):
-    if i < 31:
+    if i < 0:
         continue
     file = FILES[i]
     print(i,': ',file)

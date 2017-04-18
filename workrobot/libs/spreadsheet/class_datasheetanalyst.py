@@ -185,7 +185,7 @@ class LocateTitle(DataSheetLocator):
                     possible_title_number = i
                 count += 1
         if count >= 1:
-            if re.match(self._title_pre,possible_title) is not None:
+            if re.match(self._title_pre,possible_title.lstrip()) is not None:
                 return possible_title_number
             else:
                 #print('Can not find title!',possible_title)
@@ -542,6 +542,7 @@ class CorrectBoundary(DataSheetCorrector):
 
     def __call__(self):
         boundary = self._boundary
+        #print(boundary)
         if boundary is not None:
             for i in range(len(boundary)):
                 if re.sub('\s+','',str(boundary[i])) in self._boundary_correction:

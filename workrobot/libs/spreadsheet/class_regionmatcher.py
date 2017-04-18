@@ -138,7 +138,7 @@ class RegionMatcher:
                 else:
                     found_region = self._admin_division[file_data.loc[ind,'replace']]
                     self._result.loc[file_data.loc[ind,column]==self._result[column],column] = file_data.loc[ind,'replace']
-                    #print(self._result.loc[file_data.loc[ind,'replace']==self._result[column], 'matched'],found_region['region'])
+                    #print('st',file_data.loc[ind,'replace'],'dt',self._result.loc[file_data.loc[ind,'replace']==self._result[column], 'matched'],found_region['region'])
                     self._result.loc[file_data.loc[ind,'replace']==self._result[column], 'matched'] = found_region['region'].values[0]
                     self._result.loc[file_data.loc[ind,'replace']==self._result[column], 'acode'] = found_region['acode'].values[0]
             self._result = self._result.loc[indexes,:]
